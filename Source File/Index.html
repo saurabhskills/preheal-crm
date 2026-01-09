@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f766e;
+            --secondary: #14b8a6;
+            --bg-light: #f0fdfa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .sidebar-link.active {
+            background-color: #ccfbf1;
+            color: #0f766e;
+            border-right: 4px solid #0f766e;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 50;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col">
+
+    <!-- Loader -->
+    <div id="loader" class="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-700"></div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div id="toast-inner" class="px-4 py-3 rounded shadow text-sm font-medium flex items-center gap-2">
+            <span id="toast-icon">ℹ</span>
+            <span id="toast-message">Message</span>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-40 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800" id="confirm-title">Confirm</h3>
+            </div>
+            <div class="px-5 py-4">
+                <p class="text-sm text-gray-600" id="confirm-message">Are you sure?</p>
+                <!-- NEW: Optional input inside Confirm Modal -->
+                <div id="confirm-input-wrap" class="mt-3 hidden">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1" id="confirm-input-label">
+                        Reason (optional)
+                    </label>
+                    <textarea id="confirm-input"
+                        class="w-full border rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        rows="3" placeholder="Type reason..."></textarea>
+                </div>
+
+            </div>
+            <div class="px-5 py-3 border-t flex justify-end gap-3">
+                <button id="confirm-cancel" class="px-4 py-1.5 rounded border text-sm text-gray-600 hover:bg-gray-100">
+                    Cancel
+                </button>
+                <button id="confirm-ok"
+                    class="px-4 py-1.5 rounded bg-emerald-600 text-sm text-white hover:bg-emerald-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen" class="flex-grow flex items-center justify-center bg-teal-50">
+        <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-teal-800">PREHEAL CRM</h1>
+                <p class="text-sm text-gray-500">Healthcare Lead Management</p>
+            </div>
+
+            <div class="flex mb-4 border-b">
+                <button onclick="toggleAuth('login')" id="tab-login"
+                    class="w-1/2 pb-2 font-bold border-b-2 text-teal-600 border-teal-600">
+                    Login
+                </button>
+                <button onclick="toggleAuth('register')" id="tab-register"
+                    class="w-1/2 pb-2 font-bold border-b-2 text-gray-400 border-transparent">
+                    Register
+                </button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
+                    <input type="email" name="email"
+                        class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        placeholder="name@company.com" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                    <input type="password" name="password"
+                        class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        placeholder="••••••••" required>
+                </div>
+                <button type="submit"
+                    class="w-full bg-teal-700 text-white font-bold py-2 px-4 rounded hover:bg-teal-800">
+                    → Sign In
+                </button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Full Name</label>
+                    <input type="text" name="name" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Email</label>
+                    <input type="email" name="email" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Role</label>
+                    <select name="role" class="w-full px-3 py-2 border rounded">
+                        <option value="Executive">Executive</option>
+                        <option value="TeleCaller">Tele-Caller</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Password</label>
+                    <input type="password" name="password" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <button type="submit"
+                    class="w-full bg-teal-700 text-white font-bold py-2 px-4 rounded hover:bg-teal-800">
+                    Create Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP LAYOUT -->
+    <div id="app-layout" class="hidden h-full flex overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md flex flex-col z-10">
+            <div class="p-4 border-b flex items-center gap-2">
+                <i class="fa-solid fa-heart-pulse text-teal-600 text-xl"></i>
+                <span class="font-bold text-lg text-gray-800">Preheal CRM</span>
+            </div>
+
+            <nav class="flex-grow py-4" id="nav-menu"></nav>
+
+            <div class="p-4 border-t">
+                <div class="flex items-center gap-2 mb-2">
+                    <div id="user-initial"
+                        class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold">
+                        A</div>
+                    <div>
+                        <p class="text-sm font-bold" id="user-name">Admin</p>
+                        <p class="text-xs text-gray-500" id="user-role">Role</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="text-red-500 text-sm hover:underline">→ Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-grow bg-gray-50 overflow-y-auto p-8" id="main-content"></main>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let currentUser = null;
+        let toastTimeout = null;
+        let confirmResolve = null;
+
+        function openConfirmModal(message, title = 'Confirm', opts = {}) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+
+            const wrap = document.getElementById('confirm-input-wrap');
+            const input = document.getElementById('confirm-input');
+            const label = document.getElementById('confirm-input-label');
+
+            const wantInput = !!opts.withInput;
+            wrap.classList.toggle('hidden', !wantInput);
+
+            if (wantInput) {
+                label.innerText = opts.inputLabel || 'Reason (optional)';
+                input.value = opts.defaultValue || '';
+                setTimeout(() => input.focus(), 0);
+            } else {
+                input.value = '';
+            }
+
+            document.getElementById('confirm-modal').classList.remove('hidden');
+
+            return new Promise(resolve => {
+                confirmResolve = resolve;
+            });
+        }
+
+        function closeConfirmModal(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+
+            const wrapVisible = !document.getElementById('confirm-input-wrap').classList.contains('hidden');
+            const inputVal = document.getElementById('confirm-input').value;
+
+            if (confirmResolve) {
+                // Backward compatible:
+                // - normal confirm -> returns boolean (true/false)
+                // - confirm with input -> returns { ok, value }
+                confirmResolve(wrapVisible ? { ok: result, value: inputVal } : result);
+                confirmResolve = null;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            document.getElementById('confirm-cancel').onclick = () => closeConfirmModal(false);
+            document.getElementById('confirm-ok').onclick = () => closeConfirmModal(true);
+        });
+
+        // ===== HELPERS =====
+        const show = id => document.getElementById(id).classList.remove('hidden');
+        const hide = id => document.getElementById(id).classList.add('hidden');
+        const loading = is => document.getElementById('loader').style.display = is ? 'flex' : 'none';
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const inner = document.getElementById('toast-inner');
+            const iconSpan = document.getElementById('toast-icon');
+            const msgSpan = document.getElementById('toast-message');
+
+            msgSpan.textContent = message || '';
+            inner.className = 'px-4 py-3 rounded shadow text-sm font-medium flex items-center gap-2';
+
+            if (type === 'success') {
+                inner.classList.add('bg-emerald-600', 'text-white');
+                iconSpan.textContent = '✔';
+            } else if (type === 'error') {
+                inner.classList.add('bg-red-600', 'text-white');
+                iconSpan.textContent = '✖';
+            } else if (type === 'warning') {
+                inner.classList.add('bg-amber-500', 'text-white');
+                iconSpan.textContent = '⚠';
+            } else {
+                inner.classList.add('bg-slate-700', 'text-white');
+                iconSpan.textContent = 'ℹ';
+            }
+
+            toast.classList.remove('hidden');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        // ===== DATE HELPERS (STRING DATE SYSTEM) =====
+        // <input type="date"> always gives yyyy-mm-dd as value. [web:54]
+        function isoToDMY(iso) {
+            if (!iso) return '';
+            const [y, m, d] = iso.split('-');
+            if (!y || !m || !d) return '';
+            return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+        }
+
+        function dmyToISO(dmy) {
+            if (!dmy) return '';
+            const parts = dmy.split('/');
+            if (parts.length !== 3) return '';
+            const [d, m, y] = parts;
+            if (!y || !m || !d) return '';
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+
+        // ===== AUTH =====
+        function toggleAuth(mode) {
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const activeClasses = ['text-teal-600', 'border-teal-600'];
+            const inactiveClasses = ['text-gray-400', 'border-transparent'];
+
+            if (mode === 'login') {
+                show('login-form');
+                hide('register-form');
+                tabLogin.classList.add(...activeClasses);
+                tabLogin.classList.remove(...inactiveClasses);
+                tabRegister.classList.add(...inactiveClasses);
+                tabRegister.classList.remove(...activeClasses);
+            } else {
+                hide('login-form');
+                show('register-form');
+                tabRegister.classList.add(...activeClasses);
+                tabRegister.classList.remove(...inactiveClasses);
+                tabLogin.classList.add(...inactiveClasses);
+                tabLogin.classList.remove(...activeClasses);
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            loading(true);
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    if (res.success) {
+                        currentUser = res;
+                        initApp();
+                        showToast('Welcome back, ' + res.name + '!', 'success');
+                    } else {
+                        showToast(res.message, res.type || 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('LOGIN ERROR', err);
+                    loading(false);
+                    showToast('Server error during login.', 'error');
+                })
+                .loginUser(email, password);
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            loading(true);
+            const form = {
+                name: e.target.name.value,
+                email: e.target.email.value,
+                role: e.target.role.value,
+                password: e.target.password.value
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    showToast(res.message, res.type || (res.success ? 'success' : 'error'));
+                    if (res.success) toggleAuth('login');
+                })
+                .withFailureHandler(err => {
+                    console.error('REGISTER ERROR', err);
+                    loading(false);
+                    showToast('Server error during registration.', 'error');
+                })
+                .registerUser(form);
+        }
+
+        function logout() {
+            currentUser = null;
+            hide('app-layout');
+            show('auth-screen');
+            document.getElementById('login-form').reset();
+            showToast('You have been signed out.', 'info');
+        }
+
+        // ===== APP INIT =====
+        function initApp() {
+            hide('auth-screen');
+            show('app-layout');
+
+            document.getElementById('user-name').innerText = currentUser.name;
+            document.getElementById('user-role').innerText = currentUser.role;
+            document.getElementById('user-initial').innerText = currentUser.name.charAt(0).toUpperCase();
+
+            renderSidebar();
+
+            if (currentUser.role === 'Admin') loadDashboard();
+            else if (currentUser.role === 'Executive') loadIntake();
+            else if (currentUser.role === 'TeleCaller') loadUpdateLeads();
+            else loadAllLeads();
+        }
+
+        // ===== SIDEBAR =====
+        function renderSidebar() {
+            const nav = document.getElementById('nav-menu');
+            let html = '';
+
+            const link = (icon, text, onclick) => `
+          <button onclick="${onclick}"
+            class="sidebar-link w-full text-left px-6 py-3 hover:bg-gray-100 flex items-center gap-3 text-gray-600">
+            <i class="fa-solid ${icon}"></i> ${text}
+          </button>
+        `;
+
+            if (currentUser.role === 'Admin') {
+                html += link('fa-chart-line', 'Dashboard', 'loadDashboard()');
+                html += link('fa-user-check', 'User Approvals', 'loadApprovalView()');
+                html += link('fa-user-slash', 'Active Users', 'loadActiveUsersAdmin()');
+                html += link('fa-user-tag', 'Assign Leads TeleCaller', 'loadAssignLeads()');
+                html += link('fa-user-plus', 'Intake: Add Lead', 'loadIntake()');
+                html += link('fa-file-csv', 'Intake: Bulk Upload', 'loadBulk()');
+                html += link('fa-pen-to-square', 'Update Leads', 'loadUpdateLeads()');
+                html += link('fa-users', 'All Leads', 'loadAllLeads()');
+            }
+            else if (currentUser.role === 'Executive') {
+                html += link('fa-user-plus', 'Add Lead', 'loadIntake()');
+                html += link('fa-file-csv', 'Bulk Upload', 'loadBulk()');
+                html += link('fa-user-check', 'TeleCaller Approvals', 'loadTeleCallerApprovalView()');
+                html += link('fa-user-slash', 'TeleCaller Management', 'loadTeleCallerManagementView()');
+                html += link('fa-pen-to-square', 'Update Leads', 'loadUpdateLeads()');
+                html += link('fa-list', 'My Leads', 'loadAllLeads()');
+            }
+            else if (currentUser.role === 'TeleCaller') {
+                html += link('fa-pen-to-square', 'Update Your Leads', 'loadUpdateLeads()');
+                html += link('fa-phone', 'My Calls', 'loadAllLeads()');
+            }
+
+            nav.innerHTML = html;
+        }
+
+        // ===== VIEWS =====
+
+        // 1. ADMIN DASHBOARD
+        function loadDashboard() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(data => {
+                    loading(false);
+
+                    const statusCards = Object.keys(data.leadsByStatus).map(s => `
+              <div class="bg-white p-4 rounded shadow">
+                <p class="text-xs text-gray-500 uppercase">${s}</p>
+                <p class="text-2xl font-bold text-teal-700">${data.leadsByStatus[s]}</p>
+              </div>
+            `).join('');
+
+                    const execRows = Object.keys(data.executivePerformance).map(email => {
+                        const m = data.executivePerformance[email];
+                        const rate = m.total ? Math.round((m.converted / m.total) * 100) : 0;
+                        const label = m.name ? `${m.name} (${email})` : email;
+
+                        return `
+                <tr class="border-b">
+                  <td class="p-2 text-sm">${label}</td>
+                  <td class="p-2 text-sm text-center">${m.total}</td>
+                  <td class="p-2 text-sm text-center">${m.converted}</td>
+                  <td class="p-2 text-sm text-center">${rate}%</td>
+                </tr>
+              `;
+                    }).join('');
+
+                    const callerRows = Object.keys(data.teleCallerPerformance).map(email => {
+                        const m = data.teleCallerPerformance[email];
+                        const rate = m.total ? Math.round((m.converted / m.total) * 100) : 0;
+                        const label = m.name ? `${m.name} (${email})` : email;
+
+                        return `
+                <tr class="border-b">
+                  <td class="p-2 text-sm">${label}</td>
+                  <td class="p-2 text-sm text-center">${m.total}</td>
+                  <td class="p-2 text-sm text-center">${m.converted}</td>
+                  <td class="p-2 text-sm text-center">${rate}%</td>
+                </tr>
+              `;
+                    }).join('');
+
+                    const html = `
+              <h2 class="text-2xl font-bold mb-6 text-gray-800">Admin Dashboard</h2>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-4 rounded shadow border-l-4 border-teal-500">
+                  <p class="text-xs text-gray-500 uppercase">Total Leads</p>
+                  <p class="text-3xl font-bold text-teal-700">${data.totalLeads}</p>
+                </div>
+                ${statusCards}
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded shadow">
+                  <h3 class="px-4 py-3 border-b font-bold text-gray-800 text-sm">Executive Performance</h3>
+                  <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-50 border-b">
+                      <tr>
+                        <th class="p-2">Executive (email)</th>
+                        <th class="p-2 text-center">Leads</th>
+                        <th class="p-2 text-center">Converted</th>
+                        <th class="p-2 text-center">Conv. %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${execRows || '<tr><td colspan="4" class="p-3 text-center text-gray-400">No data</td></tr>'}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="bg-white rounded shadow">
+                  <h3 class="px-4 py-3 border-b font-bold text-gray-800 text-sm">Tele Caller Performance</h3>
+                  <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-50 border-b">
+                      <tr>
+                        <th class="p-2">Tele Caller (email)</th>
+                        <th class="p-2 text-center">Assigned</th>
+                        <th class="p-2 text-center">Converted</th>
+                        <th class="p-2 text-center">Conv. %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${callerRows || '<tr><td colspan="4" class="p-3 text-center text-gray-400">No data</td></tr>'}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            `;
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('DASH ERROR', err);
+                    loading(false);
+                    showToast('Error loading dashboard.', 'error');
+                })
+                .getAdminDashboard();
+        }
+
+        // 2. INTAKE FORM
+        function loadIntake() {
+            const html = `
+            <div class="max-w-4xl mx-auto bg-white p-8 rounded shadow">
+            <h2 class="text-2xl font-bold mb-6 text-teal-700">New Lead Intake</h2>
+            <form onsubmit="handleSubmitIntake(event)">
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Patient Name</label>
+                <input type="text" name="name" class="w-full border p-2 rounded" required>
+                </div>
+
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Phone Number</label>
+                <input type="tel" name="phone" class="w-full border p-2 rounded">
+                </div>
+
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Lead Source</label>
+                <select name="source" class="w-full border p-2 rounded">
+                    <option>Call</option>
+                    <option>Medical Camp</option>
+                    <option>Referral</option>
+                    <option>Website/Advertisment</option>
+                </select>
+                </div>
+
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Assign TeleCaller</label>
+                <select name="assignedTo" id="assignedToSelect" class="w-full border p-2 rounded">
+                    <option value="">Unassigned</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Only approved telecallers are shown.</p>
+                </div>
+
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Initial Call Notes</label>
+                <textarea name="callNotes" class="w-full border p-2 rounded h-24"></textarea>
+                </div>
+
+                <div class="mb-4">
+                <label class="block text-sm font-bold mb-1">Follow-up Date</label>
+                <input type="date" name="followUpDate" class="w-full border p-2 rounded">
+                </div>
+
+                <button type="submit"
+                        class="bg-teal-700 text-white px-6 py-2 rounded font-bold hover:bg-teal-800">
+                + Create Lead
+                </button>
+            </form>
+            </div>
+        `;
+            document.getElementById('main-content').innerHTML = html;
+
+            // Load telecaller dropdown options from server
+            loading(true);
+            google.script.run
+                .withSuccessHandler(list => {
+                    loading(false);
+                    const sel = document.getElementById('assignedToSelect');
+                    if (!sel) return;
+
+                    (list || []).forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.email;
+                        opt.textContent = u.name ? `${u.name} (${u.email})` : u.email;
+                        sel.appendChild(opt);
+                    });
+                })
+                .withFailureHandler(err => {
+                    console.error('TELECALLER LIST ERROR', err);
+                    loading(false);
+                    showToast('Could not load telecaller list.', 'warning');
+                })
+                .getApprovedTelecallers();
+        }
+
+
+        function handleSubmitIntake(e) {
+            e.preventDefault();
+            loading(true);
+            const form = {
+                name: e.target.name.value,
+                phone: e.target.phone.value,
+                source: e.target.source.value,
+                assignedTo: (e.target.assignedTo ? e.target.assignedTo.value : ''), // ✅
+                callNotes: e.target.callNotes.value,
+                followUpDate: isoToDMY(e.target.followUpDate.value) // store DD/MM/YYYY string
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    showToast(res.message || 'Lead added.', res.type || 'success');
+                    e.target.reset();
+                })
+                .withFailureHandler(err => {
+                    console.error('ADD LEAD ERROR', err);
+                    loading(false);
+                    showToast('Error adding lead.', 'error');
+                })
+                .addLead(form, currentUser.email);
+        }
+
+        // 3. BULK UPLOAD
+        function loadBulk() {
+            const html = `
+                <div class="max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold mb-2">Bulk Lead Import (CSV)</h2>
+                <p class="text-gray-500 mb-6">
+                    Upload a CSV file and it will be copied into the Leads sheet.
+                </p>
+
+                <div class="bg-white p-6 rounded shadow">
+                    <input id="bulkCsvFile" type="file" accept=".csv"
+                        class="w-full border p-3 rounded bg-white" />
+
+                    <button onclick="uploadCsvFile()"
+                    class="mt-4 bg-teal-700 text-white px-6 py-2 rounded font-bold">
+                    Upload & Import
+                    </button>
+
+                    <div class="text-xs text-gray-500 mt-3">
+                    Required header: Name
+                    <br>Supported headers: Phone, Source, CallNotes, FollowUpDate, AssignedTo
+                    <br>FollowUpDate format: DD/MM/YYYY
+                    </div>
+                </div>
+                </div>
+            `;
+                document.getElementById('main-content').innerHTML = html;
+        }
+
+
+        function uploadCsvFile() {
+        const input = document.getElementById('bulkCsvFile');
+        const file = input && input.files ? input.files[0] : null;
+
+        if (!file) {
+            showToast('Please choose a CSV file.', 'warning');
+            return;
+        }
+
+        loading(true);
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const csvText = String(reader.result || '');
+
+            google.script.run
+            .withSuccessHandler(res => {
+                loading(false);
+                showToast(res.message || 'Imported.', res.type || 'success');
+                input.value = '';
+            })
+            .withFailureHandler(err => {
+                console.error('CSV IMPORT ERROR', err);
+                loading(false);
+                showToast(err && err.message ? err.message : 'Import failed.', 'error');
+            })
+            .importLeadsFromCsv(csvText, currentUser.email);
+        };
+
+        reader.onerror = () => {
+            loading(false);
+            showToast('Could not read the file.', 'error');
+        };
+
+        reader.readAsText(file); // reads CSV as text in the browser [web:316]
+        }
+
+
+        function uploadBulkFile() {
+            const input = document.getElementById('bulkFile');
+            const file = input && input.files ? input.files[0] : null;
+            if (!file) {
+                showToast('Please choose a file.', 'warning');
+                return;
+            }
+
+            loading(true);
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result || '';
+                const base64 = String(dataUrl).replace(/^data:.*;base64,/, '');
+
+                const payload = {
+                    fileName: file.name,
+                    mimeType: file.type || 'application/octet-stream',
+                    base64: base64
+                };
+
+                google.script.run
+                    .withSuccessHandler(res => {
+                        loading(false);
+                        showToast(res.message || 'Imported.', res.type || 'success');
+                        input.value = '';
+                    })
+                    .withFailureHandler(err => {
+                        console.error('IMPORT ERROR', err);
+                        loading(false);
+                        showToast(err && err.message ? err.message : 'Import failed.', 'error');
+                    })
+                    .importLeadsFromExcel(payload, currentUser.email);
+            };
+
+            reader.readAsDataURL(file); // produces base64 data URL [web:256]
+        }
+
+
+
+        // 4. UPDATE YOUR LEADS (NEW - TELECALLER)
+        function loadUpdateLeads() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(leads => {
+                    loading(false);
+
+                    const rows = (leads || []).map(l => `
+              <tr class="border-b align-top">
+                <td class="p-3">
+                  <div class="font-bold text-gray-800">${l.name || '-'}</div>
+                  <div class="text-xs text-gray-500">${l.phone || ''}</div>
+                  <div class="text-xs text-gray-500">${l.source || ''}</div>
+                  <div class="text-[11px] text-gray-400 mt-2">LeadID: ${l.id}</div>
+                </td>
+
+                <td class="p-3 w-56">
+                  <label class="text-xs text-gray-500">Lead status</label>
+                  <select id="st-${l.id}" class="w-full border rounded p-2 text-sm mt-1">
+                    ${['New', 'Contacted', 'Follow Up', 'Converted', 'Closed']
+                            .map(s => `<option ${String(l.status).trim() === s ? 'selected' : ''}>${s}</option>`).join('')}
+                  </select>
+
+                  <label class="text-xs text-gray-500 block mt-3">Follow-up date</label>
+                  <input id="fd-${l.id}" type="date" value="${l.followUpDateISO || ''}"
+                         class="w-full border rounded p-2 text-sm mt-1" />
+
+                  <label class="text-xs text-gray-500 block mt-3">Follow-up status</label>
+                  <select id="fs-${l.id}" class="w-full border rounded p-2 text-sm mt-1">
+                    ${['Pending', 'Done', 'Rescheduled'].map(s => `<option ${String(l.followUpStatus).trim() === s ? 'selected' : ''}>${s}</option>`).join('')}
+                  </select>
+                </td>
+
+                <td class="p-3 w-[420px]">
+                  <label class="text-xs text-gray-500">Add new call note (will be appended)</label>
+                  <textarea id="cn-${l.id}" class="w-full border rounded p-2 text-sm mt-1 h-20"
+                            placeholder="Type today’s call notes..."></textarea>
+
+                  <details class="mt-3">
+                    <summary class="text-xs text-teal-700 cursor-pointer">View previous notes</summary>
+                    <pre class="text-xs bg-gray-50 border rounded p-2 mt-2 whitespace-pre-wrap">${(l.callNotes || '').replace(/</g, '&lt;')}</pre>
+                  </details>
+
+                  <label class="text-xs text-gray-500 block mt-3">Issue (optional)</label>
+                  <input id="is-${l.id}" value="${(l.issue || '').replace(/"/g, '&quot;')}"
+                         class="w-full border rounded p-2 text-sm mt-1" />
+
+                  <button onclick="saveLeadUpdate('${l.id}')"
+                          class="mt-4 bg-teal-700 text-white px-4 py-2 rounded text-sm font-bold hover:bg-teal-800">
+                    Save update
+                  </button>
+                </td>
+              </tr>
+            `).join('');
+
+                    const html = `
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Update Your Leads</h2>
+              </div>
+
+              <div class="bg-white rounded shadow overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-gray-100 border-b">
+                    <tr>
+                      <th class="p-3">Lead</th>
+                      <th class="p-3">Status & follow-up</th>
+                      <th class="p-3">Notes & updates</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows || `<tr><td colspan="3" class="p-6 text-center text-gray-500">No assigned leads found.</td></tr>`}
+                  </tbody>
+                </table>
+              </div>
+            `;
+
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('UPDATE LEADS VIEW ERROR', err);
+                    loading(false);
+                    showToast('Error loading your leads.', 'error');
+                })
+                .getLeadsForUpdate(currentUser.role, currentUser.email);
+        }
+
+        async function saveLeadUpdate(leadId) {
+            const ok = await openConfirmModal('Save changes for this lead?', 'Update lead');
+            if (!ok) return;
+
+            const leadStatus = document.getElementById(`st-${leadId}`).value;
+            const followUpDateDMY = isoToDMY(document.getElementById(`fd-${leadId}`).value);
+            const followUpStatus = document.getElementById(`fs-${leadId}`).value;
+            const callNotes = document.getElementById(`cn-${leadId}`).value.trim();
+            const issue = document.getElementById(`is-${leadId}`).value;
+
+            const update = {
+                leadId,
+                leadStatus,
+                followUpDate: followUpDateDMY, // stored as DD/MM/YYYY string
+                followUpStatus,
+                issue
+            };
+            if (callNotes) update.callNotes = callNotes;
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    if (res && res.success) {
+                        showToast(res.message || 'Saved.', 'success');
+                        loadUpdateLeads();
+                    } else {
+                        showToast((res && res.message) || 'Update failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('SAVE UPDATE ERROR', err);
+                    loading(false);
+                    showToast('Server error while saving.', 'error');
+                })
+                .updateLeadWithHistory(update, currentUser.email, currentUser.role, { appendCallNotes: true });
+        }
+
+        // 5. ALL LEAD LIST (for all roles, server filters)
+        function loadAllLeads() {
+            loading(true);
+
+            google.script.run
+                .withSuccessHandler(leads => {
+                    loading(false);
+
+                    let html = `
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-2xl font-bold">Lead Database</h2>
+              <button onclick="downloadLeadsCsv()"
+                class="text-teal-700 font-bold border border-teal-700 px-4 py-1 rounded hover:bg-teal-50">
+                <i class="fa-solid fa-download"></i> Download CSV
+              </button>
+            </div>
+
+            <div class="bg-white rounded shadow overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-100 border-b">
+                  <tr>
+                    <th class="p-4">Name</th>
+                    <th class="p-4">Issue</th>
+                    <th class="p-4">Source</th>
+                    <th class="p-4">Follow-up date</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4">Assigned To</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+
+                    (leads || []).forEach(p => {
+                        const st = (p.status || '').toString().trim().toUpperCase();
+                        const statusColor = (st === 'NEW') ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+
+                        html += `
+              <tr class="border-b hover:bg-gray-50">
+                <td class="p-4 font-bold text-gray-700">${p.name || ''}</td>
+                <td class="p-4 text-gray-600 truncate max-w-xs">${p.issue || ''}</td>
+                <td class="p-4 text-gray-500 text-sm">${p.source || ''}</td>
+                <td class="p-4 text-gray-600 text-sm">${p.followUpDate || '-'}</td>
+                <td class="p-4">
+                  <span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${p.status || ''}</span>
+                </td>
+                <td class="p-4 text-sm font-medium">${p.assignedTo || '-'}</td>
+              </tr>
+            `;
+                    });
+
+                    html += `
+                </tbody>
+              </table>
+            </div>
+          `;
+
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('LOAD LEADS ERROR', err);
+                    loading(false);
+                    showToast('Error loading leads.', 'error');
+                })
+                .getLeads(currentUser.role, currentUser.email);
+        }
+
+
+        // 6. USER APPROVAL VIEW
+        function loadApprovalView() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(users => {
+                    loading(false);
+                    let html = `
+              <h2 class="text-2xl font-bold mb-6 text-gray-800">User Approval Queue</h2>
+              <div class="grid gap-4">
+            `;
+                    if (!users.length) {
+                        html += `<p class="text-gray-500 bg-white p-6 rounded shadow">No users pending approval.</p>`;
+                    }
+                    users.forEach(u => {
+                        html += `
+                <div class="bg-white p-6 rounded shadow flex justify-between items-center border-l-4 border-blue-400">
+                  <div>
+                    <h3 class="text-lg font-bold text-gray-800">${u.name}</h3>
+                    <p class="text-sm text-gray-600 mb-1">${u.email}</p>
+                    <p class="text-sm font-medium text-teal-700">${u.role}</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button onclick="handleApproveUser(${u.row})"
+                            class="bg-emerald-600 text-white px-4 py-2 rounded text-sm hover:bg-emerald-700">
+                      Approve
+                    </button>
+                    <button onclick="handleRejectUser(${u.row})"
+                      class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              `;
+                    });
+                    html += `</div>`;
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('APPROVAL ERROR', err);
+                    loading(false);
+                    showToast('Error loading pending users.', 'error');
+                })
+                .getPendingUsers();
+        }
+
+        async function handleApproveUser(row) {
+            const ok = await openConfirmModal(
+                'Do you want to approve this user? They will be able to log in immediately.',
+                'Approve user'
+            );
+            if (!ok) return;
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    if (res && res.success) {
+                        showToast(res.message || 'User approved.', 'success');
+                        loadApprovalView();
+                    } else {
+                        showToast((res && res.message) || 'Error approving user.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('APPROVE ERROR', err);
+                    loading(false);
+                    showToast('Server error while approving.', 'error');
+                })
+                .approveUserByAdmin(row, currentUser.email);
+        }
+
+        async function handleRejectUser(row) {
+            const res = await openConfirmModal(
+                'Do you want to reject this user registration?',
+                'Reject user',
+                { withInput: true, inputLabel: 'Rejection reason (optional):', defaultValue: '' }
+            );
+
+            // When withInput=true, openConfirmModal returns { ok, value }
+            if (!res.ok) return;
+
+            const reason = (res.value || '').trim();
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(r => {
+                    loading(false);
+                    if (r && r.success) {
+                        showToast(r.message || 'User rejected.', 'success');
+                        loadApprovalView();
+                    } else {
+                        showToast((r && r.message) || 'Reject failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('ADMIN REJECT ERROR', err);
+                    loading(false);
+                    showToast('Server error while rejecting.', 'error');
+                })
+                .rejectUserByAdmin(row, currentUser.email, reason);
+        }
+
+        // User Approval by Executives
+
+        function loadTeleCallerApprovalView() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(users => {
+                    loading(false);
+
+                    let html = `
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">TeleCaller Approval Queue</h2>
+            <div class="grid gap-4">
+          `;
+
+                    if (!users || !users.length) {
+                        html += `<p class="text-gray-500 bg-white p-6 rounded shadow">No TeleCallers pending approval.</p>`;
+                    } else {
+                        users.forEach(u => {
+                            html += `
+                <div class="bg-white p-6 rounded shadow flex justify-between items-center border-l-4 border-blue-400">
+                  <div>
+                    <h3 class="text-lg font-bold text-gray-800">${u.name || ''}</h3>
+                    <p class="text-sm text-gray-600 mb-1">${u.email || ''}</p>
+                    <p class="text-sm font-medium text-teal-700">${u.role || ''}</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button onclick="handleApproveTeleCaller(${u.row})"
+                      class="bg-emerald-600 text-white px-4 py-2 rounded text-sm hover:bg-emerald-700">
+                      Approve
+                    </button>
+                    <button onclick="handleRejectTeleCaller(${u.row})"
+                      class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              `;
+                        });
+                    }
+
+                    html += `</div>`;
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('EXEC TELECALLER APPROVAL VIEW ERROR', err);
+                    loading(false);
+                    showToast('Error loading pending TeleCallers.', 'error');
+                })
+                .getPendingTeleCallersForExecutive(currentUser.email);
+        }
+
+        async function handleApproveTeleCaller(row) {
+            const ok = await openConfirmModal(
+                'Do you want to approve this TeleCaller? They will be able to log in immediately.',
+                'Approve TeleCaller'
+            );
+            if (!ok) return;
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    if (res && res.success) {
+                        showToast(res.message || 'TeleCaller approved.', 'success');
+                        loadTeleCallerApprovalView();
+                    } else {
+                        showToast((res && res.message) || 'Approval failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('APPROVE TELECALLER ERROR', err);
+                    loading(false);
+                    showToast('Server error while approving.', 'error');
+                })
+                .approveTeleCallerByExecutive(row, currentUser.email);
+        }
+
+        async function handleRejectTeleCaller(row) {
+            const res = await openConfirmModal(
+                'Do you want to reject this TeleCaller registration?',
+                'Reject TeleCaller',
+                { withInput: true, inputLabel: 'Rejection reason (optional):', defaultValue: '' }
+            );
+
+            if (!res.ok) return;
+
+            const reason = (res.value || '').trim();
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(r => {
+                    loading(false);
+                    if (r && r.success) {
+                        showToast(r.message || 'TeleCaller rejected.', 'success');
+                        loadTeleCallerApprovalView();
+                    } else {
+                        showToast((r && r.message) || 'Reject failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('REJECT TELECALLER ERROR', err);
+                    loading(false);
+                    showToast('Server error while rejecting.', 'error');
+                })
+                .rejectTeleCallerByExecutive(row, currentUser.email, reason);
+        }
+
+        // Leads assignemt to the telecallers
+        function loadAssignLeads() {
+            loading(true);
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+
+                    const teleOptions = (res.teleCallers || []).map(t =>
+                        `<option value="${t.email}">${t.name ? `${t.name} (${t.email})` : t.email}</option>`
+                    ).join('');
+
+                    let html = `
+              <h2 class="text-2xl font-bold mb-6 text-gray-800">Assign Leads to TeleCallers</h2>
+              <div class="bg-white rounded shadow overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-gray-50 border-b">
+                    <tr>
+                      <th class="p-2">Lead</th>
+                      <th class="p-2">Phone</th>
+                      <th class="p-2">Status</th>
+                      <th class="p-2">Follow-up</th>
+                      <th class="p-2">Assigned To</th>
+                      <th class="p-2">Assign</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+            `;
+
+                    (res.leads || []).forEach(l => {
+                        const selectId = `assign-${l.id}`;
+                        html += `
+                <tr class="border-b">
+                  <td class="p-2 font-medium">
+                    ${l.name || '-'}
+                    <div class="text-gray-400">${l.id}</div>
+                  </td>
+                  <td class="p-2">${l.phone || '-'}</td>
+                  <td class="p-2">${l.status || '-'}</td>
+                  <td class="p-2">${l.followUpDate || '-'}</td>
+                  <td class="p-2">${l.assignedTo || '-'}</td>
+                  <td class="p-2">
+                    <div class="flex gap-2 items-center">
+                      <select id="${selectId}" class="border rounded px-2 py-1">
+                        <option value="">-- Select telecaller --</option>
+                        ${teleOptions}
+                      </select>
+                      <button class="bg-emerald-600 text-white px-3 py-1 rounded"
+                              onclick="handleAssignLead('${l.id}', '${selectId}')">
+                        Assign
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+                    });
+
+                    html += `</tbody></table></div>`;
+                    document.getElementById('main-content').innerHTML = html;
+                })
+                .withFailureHandler(err => {
+                    console.error('ASSIGN VIEW ERROR', err);
+                    loading(false);
+                    showToast('Error loading assignment view.', 'error');
+                })
+                .getAssignmentDataForAdmin(); // server function
+        }
+
+        async function handleAssignLead(leadId, selectId) {
+            const teleCallerEmail = document.getElementById(selectId).value;
+            if (!teleCallerEmail) {
+                showToast('Please select a telecaller.', 'warning');
+                return;
+            }
+
+            const ok = await openConfirmModal(
+                `Assign lead ${leadId} to ${teleCallerEmail}?`,
+                'Assign lead'
+            );
+            if (!ok) return;
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(res => {
+                    loading(false);
+                    if (res && res.success) {
+                        showToast(res.message || 'Lead assigned successfully.', 'success');
+                        loadAssignLeads();
+                    } else {
+                        showToast((res && res.message) || 'Failed to assign lead.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('ASSIGN ERROR', err);
+                    loading(false);
+                    showToast('Server error while assigning lead.', 'error');
+                })
+                .assignLeadToTeleCaller(leadId, teleCallerEmail, currentUser.email); // server function
+        }
+
+        // Deactivate Existing Users
+        // (a). Admin View
+        function loadActiveUsersAdmin() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(users => {
+                    loading(false);
+
+                    const rows = (users || []).map(u => {
+                        const role = String(u.Role || '').trim();
+                        const email = String(u.Email || '').trim().toLowerCase();
+
+                        // Rule 1: Nobody can deactivate Admin users
+                        const isAdminUser = (role === 'Admin');
+
+                        // Optional Rule 2: Prevent self-deactivation (recommended)
+                        const isSelf = (currentUser && String(currentUser.email || '').trim().toLowerCase() === email);
+
+                        const canDeactivate = !isAdminUser && !isSelf;
+
+                        return `
+          <tr class="border-b">
+            <td class="p-3">
+              <div class="font-bold text-gray-800">${u.Name || '-'}</div>
+              <div class="text-xs text-gray-500">${u.Email || '-'}</div>
+            </td>
+            <td class="p-3 text-sm">${u.Role || '-'}</td>
+            <td class="p-3 text-sm">${u.Status || '-'}</td>
+            <td class="p-3 text-right">
+              ${canDeactivate ? `
+                <button class="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-900"
+                  onclick="handleDeactivateApprovedUser(${u.row})">
+                  Deactivate
+                </button>
+              ` : `
+                <span class="text-xs text-gray-400">Not allowed</span>
+              `}
+            </td>
+          </tr>
+        `;
+                    }).join('');
+
+                    document.getElementById('main-content').innerHTML = `
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Active Users (Approved)</h2>
+        <div class="bg-white rounded shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-100 border-b">
+              <tr>
+                <th class="p-3">User</th>
+                <th class="p-3">Role</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `<tr><td colspan="4" class="p-6 text-center text-gray-500">No approved users found.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      `;
+                })
+                .withFailureHandler(err => {
+                    console.error('ACTIVE USERS VIEW ERROR', err);
+                    loading(false);
+                    showToast('Error loading approved users.', 'error');
+                })
+                .getApprovedUsersForAdmin();
+        }
+
+        // (b). Admin handler
+        async function handleDeactivateApprovedUser(row) {
+            const res = await openConfirmModal(
+                'Deactivate this user? They cannot log in, but historical data remains.',
+                'Deactivate user',
+                { withInput: true, inputLabel: 'Deactivation reason (optional):', defaultValue: '' }
+            );
+            if (!res.ok) return;
+
+            const reason = (res.value || '').trim();
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(r => {
+                    loading(false);
+                    if (r && r.success) {
+                        showToast(r.message || 'User deactivated.', 'success');
+                        loadActiveUsersAdmin();
+                    } else {
+                        showToast((r && r.message) || 'Deactivate failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('DEACTIVATE USER ERROR', err);
+                    loading(false);
+                    showToast('Server error while deactivating.', 'error');
+                })
+                .deactivateApprovedUserByAdmin(row, currentUser.email, reason);
+        }
+
+        // For Executives
+        // (a). EXECUTIVE VIEW
+        function loadTeleCallerManagementView() {
+            loading(true);
+            google.script.run
+                .withSuccessHandler(users => {
+                    loading(false);
+
+                    const rows = (users || []).map(u => `
+        <tr class="border-b">
+          <td class="p-3">
+            <div class="font-bold text-gray-800">${u.Name || '-'}</div>
+            <div class="text-xs text-gray-500">${u.Email || '-'}</div>
+          </td>
+          <td class="p-3 text-sm">${u.Role || '-'}</td>
+          <td class="p-3 text-sm">${u.Status || '-'}</td>
+          <td class="p-3 text-right">
+            <button class="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-900"
+              onclick="handleDeactivateApprovedTeleCaller(${u.row})">
+              Deactivate
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+                    document.getElementById('main-content').innerHTML = `
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">TeleCaller Management (Approved)</h2>
+        <div class="bg-white rounded shadow overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-100 border-b">
+              <tr>
+                <th class="p-3">User</th>
+                <th class="p-3">Role</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `<tr><td colspan="4" class="p-6 text-center text-gray-500">No approved TeleCallers found.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      `;
+                })
+                .withFailureHandler(err => {
+                    console.error('TELECALLER MANAGEMENT VIEW ERROR', err);
+                    loading(false);
+                    showToast('Error loading approved TeleCallers.', 'error');
+                })
+                .getApprovedTeleCallersForExecutive(currentUser.email);
+        }
+
+        // (b). Executive Handler
+        async function handleDeactivateApprovedTeleCaller(row) {
+            const res = await openConfirmModal(
+                'Deactivate this TeleCaller? They cannot log in, but historical data remains.',
+                'Deactivate TeleCaller',
+                { withInput: true, inputLabel: 'Deactivation reason (optional):', defaultValue: '' }
+            );
+            if (!res.ok) return;
+
+            const reason = (res.value || '').trim();
+
+            loading(true);
+            google.script.run
+                .withSuccessHandler(r => {
+                    loading(false);
+                    if (r && r.success) {
+                        showToast(r.message || 'TeleCaller deactivated.', 'success');
+                        loadTeleCallerManagementView();
+                    } else {
+                        showToast((r && r.message) || 'Deactivate failed.', 'error');
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('DEACTIVATE TELECALLER ERROR', err);
+                    loading(false);
+                    showToast('Server error while deactivating.', 'error');
+                })
+                .deactivateApprovedTeleCallerByExecutive(row, currentUser.email, reason);
+        }
+
+        // 8. Function to Download Lead List.
+        function downloadLeadsCsv() {
+            loading(true);
+
+            google.script.run
+                .withSuccessHandler(csvText => {
+                    loading(false);
+
+                    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    const d = new Date();
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+
+                    a.download = `leads_${yyyy}-${mm}-${dd}.csv`;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    URL.revokeObjectURL(url);
+                    showToast('CSV downloaded.', 'success');
+                })
+                .withFailureHandler(err => {
+                    console.error('CSV DOWNLOAD ERROR', err);
+                    loading(false);
+                    showToast('Error generating CSV.', 'error');
+                })
+                .exportLeadsCsv(currentUser.role, currentUser.email);
+        }
+
+    </script>
+</body>
+
+</html>
